@@ -1,0 +1,20 @@
+# 统一换行：源码在库里一律 LF，检出时按平台处理，避免 Windows/Mac 协作时整文件 diff
+* text=auto eol=lf
+
+# 明确二进制，别做换行转换
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.wav binary
+*.mp3 binary
+*.ogg binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+
+# PowerShell 脚本保留 CRLF（Windows 上更稳）
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf

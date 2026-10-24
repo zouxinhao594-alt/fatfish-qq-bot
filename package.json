@@ -1,0 +1,25 @@
+{
+  "name": "fatfish-qq-bot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "大肥鱼 · QQ 陪伴机器人：零 npm 依赖的 OneBot11 机器人 + 本地网页控制台（拟人聊天 / 克隆音色 / 唱歌 / 表情包 / QQ空间）",
+  "keywords": [
+    "qq-bot",
+    "onebot",
+    "snowluma",
+    "napcat",
+    "gpt-sovits",
+    "rvc",
+    "demucs",
+    "chatbot"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/main.mjs --data data",
+    "test": "node test/run.mjs"
+  }
+}

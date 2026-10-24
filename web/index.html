@@ -1,0 +1,1156 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>大肥鱼 · 控制台 v2</title>
+<style>
+/* ── 配色：浅色默认，右上角可切深色 ───────────────────────── */
+:root{--bg:#f4f2ec;--layer:#fbfaf7;--line:#e2ded4;--fg:#1c1b19;--fg2:#56534d;--fg3:#8d8880;--brand:#2f9d8f;--warn:#b8801f;--bad:#c0503c;--ok:#2f8f4e}
+body[data-dark]{--bg:#0f1115;--layer:#171a20;--line:#2a2f38;--fg:#e8e6e1;--fg2:#a8a49c;--fg3:#6f6b64;--brand:#4fc3b0}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.75 "Microsoft YaHei UI","Segoe UI",system-ui,sans-serif}
+header{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--layer);position:sticky;top:0;z-index:9}
+h1{font-size:15px;margin:0;font-weight:600;letter-spacing:.3px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--bad)}
+.dot.on{background:var(--ok)}
+.pill{font-size:12px;padding:2px 9px;border:1px solid var(--line);border-radius:999px;color:var(--fg2)}
+.pill.dry{color:var(--warn);border-color:var(--warn);background:#b8801f14}
+.sp{flex:1}
+button{font:inherit;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--fg);cursor:pointer;transition:.15s}
+button:hover{border-color:var(--brand);color:var(--brand)}
+button.primary{background:#0f1115;color:#fff;border-color:#0f1115}
+body[data-dark] button.primary{background:var(--brand);border-color:var(--brand);color:#06110f}
+main{padding:16px 20px 60px;max-width:1120px;margin:0 auto}
+/* ── 分区导航 ─────────────────────────────────────────── */
+nav{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px}
+nav button{font-size:13.5px}
+nav button[aria-selected=true]{background:var(--layer);border-color:var(--brand);color:var(--brand);font-weight:600}
+/* ── 卡片 ─────────────────────────────────────────────── */
+.card{background:var(--layer);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:14px}
+.card>h3{margin:0 0 2px;font-size:14px;font-weight:600}
+.card>.lede{margin:0 0 12px;color:var(--fg3);font-size:12.5px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.kv{border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+.kv b{display:block;font-size:12px;color:var(--fg3);font-weight:400;margin-bottom:1px}
+.kv span{font-size:15px}
+/* ── 表单 ─────────────────────────────────────────────── */
+.field{padding:10px 0;border-bottom:1px dashed var(--line)}
+.field:last-child{border-bottom:0}
+.field .top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.field label{font-size:13.5px;font-weight:600}
+.field .key{font:11.5px Consolas,monospace;color:var(--fg3)}
+.field .hint{color:var(--fg3);font-size:12px;margin:2px 0 6px;line-height:1.6}
+.field input[type=text],.field input[type=password],.field input[type=number],.field select{width:100%;max-width:520px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font:inherit}
+.field.changed{padding-left:10px;border-left:2px solid var(--brand)}
+.field .unit{color:var(--fg3);font-size:12px;margin-left:6px}
+.switch{display:flex;align-items:center;gap:8px}
+.switch input{width:16px;height:16px}
+textarea{width:100%;min-height:240px;font-family:Consolas,monospace;font-size:13px;line-height:1.7;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;overflow:auto;max-height:420px;font-size:12.5px;margin:0}
+.ev{padding:4px 0;border-bottom:1px dashed var(--line);font-size:13px}
+.ev time{color:var(--fg3);margin-right:8px;font-variant-numeric:tabular-nums}
+.ev b{color:var(--brand);font-weight:600;margin-right:6px}
+.ev .g{color:var(--fg3);margin-left:8px;font-size:12px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.hint{color:var(--fg3);font-size:12px}
+.toast{position:fixed;right:18px;bottom:18px;background:#0f1115;color:#fff;padding:10px 14px;border-radius:10px;opacity:0;transition:.2s;pointer-events:none;font-size:13px}
+.toast.on{opacity:1}
+details{margin:8px 0 0}
+summary{cursor:pointer;color:var(--fg2);font-size:12.5px}
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;border:1px solid var(--line);color:var(--fg3);margin-left:6px}
+ul.plain{margin:0;padding-left:18px}
+ul.plain li{margin:3px 0}
+
+/* 成长面板：习惯与固定身份分开显示 */
+.growth-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.growth-head h2{font-size:22px;margin:0;letter-spacing:.5px}
+.growth-sub{color:var(--fg2);margin:4px 0 0;font-size:13px}
+.growth-layout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(260px,1fr);gap:16px;margin-top:18px}
+.growth-panel{border:1px solid var(--line);border-radius:12px;padding:18px;min-width:0}
+.growth-panel h3{font-size:14px;margin:0 0 10px}
+.growth-fixed{border-left:3px solid var(--brand);background:var(--bg);padding:13px 16px;border-radius:8px;margin:16px 0 0}
+.growth-fixed strong{display:block;font-size:16px}
+.growth-fixed p{margin:3px 0 0;color:var(--fg2);font-size:12px}
+.growth-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border:1px solid var(--line);border-radius:99px;font-size:12px;color:var(--fg2)}
+.growth-badge[data-mode=on]{color:var(--brand);border-color:var(--brand)}
+.growth-badge[data-mode=paused]{color:var(--warn);border-color:var(--warn)}
+.growth-trait{margin:18px 0 24px}
+.growth-trait:last-child{margin-bottom:0}
+.growth-trait-title{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.growth-trait-title b{font-size:14px}.growth-trait-title span{font-size:12px;color:var(--brand)}
+.growth-track{position:relative;height:8px;border-radius:8px;background:var(--line);margin:12px 0 7px}
+.growth-track:before{content:"";position:absolute;left:50%;top:-4px;width:1px;height:16px;background:var(--fg2)}
+.growth-fill{position:absolute;height:8px;border-radius:8px;background:var(--brand)}
+.growth-axis{display:flex;justify-content:space-between;gap:6px;font-size:11px;color:var(--fg2)}
+.growth-note{font-size:12px;color:var(--fg2);margin:12px 0 0}
+.growth-control{padding:12px 0;border-bottom:1px solid var(--line)}
+.growth-control:first-of-type{padding-top:0}.growth-control label{display:flex;align-items:center;gap:10px;font-weight:600}
+.growth-control input[type=checkbox]{accent-color:var(--brand);width:18px;height:18px}
+.growth-control p{font-size:12px;color:var(--fg2);margin:4px 0 0}
+.growth-control input[type=number]{width:90px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px;color:var(--fg);font:inherit}
+.growth-reset{border-top:1px dashed var(--line);margin-top:18px;padding-top:14px}
+.growth-reset button{color:var(--bad)}.growth-reset p{font-size:12px;color:var(--fg2);margin:6px 0}
+.growth-info{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.growth-info span{font-size:12px;padding:4px 9px;background:var(--bg);border-radius:7px;color:var(--fg2)}
+#pe-growth-status{min-height:24px;color:var(--fg2);font-size:12px;margin-top:8px}
+#pe-growth-error{color:var(--bad);font-size:13px}
+#tab-persona button:disabled{opacity:.5;cursor:not-allowed}
+#tab-persona .growth-editor>summary{font-size:15px;font-weight:600;color:var(--fg);padding:3px 0}
+#tab-persona .growth-editor textarea{min-height:320px;margin-top:12px}
+@media(max-width:720px){header{flex-wrap:wrap;gap:8px;padding:10px 12px}header h1{white-space:nowrap;flex-shrink:0}header button,header .pill,header .dot{flex-shrink:0;white-space:nowrap}header .sp,#build{display:none}.growth-layout{grid-template-columns:1fr}.growth-panel{padding:14px}.growth-head h2{font-size:20px}.growth-trait-title{flex-wrap:wrap}main{padding-left:12px;padding-right:12px}}
+
+</style>
+</head>
+<body>
+<header>
+  <span class="dot" id="dot"></span>
+  <h1>大肥鱼 · 控制台</h1>
+  <span class="pill" id="ver">v2</span>
+  <span class="pill" id="build" title="这条是构建时间；如果你看到的不是最新时间，说明页面还是旧的，按 Ctrl+F5">__BUILD__</span>
+  <span class="pill" id="mode">…</span>
+  <span class="sp"></span>
+  <button id="reload">刷新页面</button>
+  <button id="theme">深/浅</button>
+</header>
+<main>
+  <nav id="tabs">
+    <button data-tab="home" aria-selected="true">概览</button>
+    <button data-tab="models">模型</button>
+    <button data-tab="config">设置</button>
+    <button data-tab="persona">人格</button>
+    <button data-tab="kb">知识库</button>
+    <button data-tab="stickers">表情库</button>
+    <button data-tab="voices">音色</button>
+    <button data-tab="diary">日记</button>
+    <button data-tab="qzone">空间</button>
+    <button data-tab="memory">记忆</button>
+    <button data-tab="events">事件</button>
+  </nav>
+
+  <!-- ── 概览：一眼看状态 + 手动发言 ─────────────────── -->
+  <section id="tab-home">
+    <div class="card"><h3>运行状态</h3><p class="lede">每 3 秒自动刷新。灰点是没连上 NapCat，检查 NapCat 是否在跑、端口是否是 3001。</p><div class="grid" id="stats"></div></div>
+    <div class="card">
+      <h3>手动说一句</h3><p class="lede">测试通道用：直接以机器人身份往群里发一条（演练模式下不会真发）。</p>
+      <div class="row"><input id="say-group" placeholder="群号（留空用第一个白名单群）" style="flex:1;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)"><input id="say-text" placeholder="要说的话" style="flex:2;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)"><button class="primary" id="say-btn">发送</button></div>
+      <div class="hint" id="say-out"></div>
+    </div>
+  </section>
+
+  <!-- ── 模型：渠道 + 四个用途的路由，点一下切换 ─────────── -->
+  <section id="tab-models" hidden>
+    <div class="card">
+      <h3>当前用哪个模型</h3>
+      <p class="lede">四个用途可以各指一个模型。把关每条消息都要跑一次，建议挑便宜的；识图必须选支持图片输入的。</p>
+      <div id="routes"></div>
+    </div>
+    <div class="card">
+      <h3>渠道与模型清单</h3>
+      <p class="lede">一个渠道 = 一套「接口地址 + 密钥 + 模型清单」。可以从 DSH 一键导入它已经配好的渠道。</p>
+      <div class="row">
+        <button class="primary" id="md-import">从 DSH 导入</button>
+        <button id="md-refresh">刷新模型清单</button>
+        <button id="md-reload">重新读取</button>
+        <span class="hint" id="md-out"></span>
+      </div>
+      <div id="channels" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <!-- ── 设置：按分区渲染，每个字段都有中文名和说明 ───── -->
+  <section id="tab-config" hidden>
+    <div class="card">
+      <div class="row">
+        <button class="primary" id="cfg-save">保存修改</button>
+        <button id="cfg-reload">丢弃改动</button>
+        <label class="switch"><input type="checkbox" id="cfg-adv"> 显示高级项</label>
+        <span class="hint" id="cfg-count"></span>
+      </div>
+      <div class="hint">只有改过的项才会提交；改完立即生效（端口例外，要重启）。</div>
+    </div>
+    <div id="cfg-form"></div>
+  </section>
+
+  <!-- ── 表情库：它能自己攒，也能批量教 ─────────────────── -->
+  <section id="tab-stickers" hidden>
+    <div class="card">
+      <h3>表情库</h3>
+      <p class="lede">群里有人发表情时它会自动收（用看图描述当标签）。也可以把一整个文件夹交给它，逐张看、逐张学。</p>
+      <div class="row">
+        <input id="st-dir" placeholder="文件夹路径，例如 D:\pics\表情包" style="flex:1;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)">
+        <input id="st-limit" type="number" value="100" style="width:100px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)">
+        <button class="primary" id="st-import">批量教它</button>
+        <button id="st-reload">刷新</button>
+      </div>
+      <div class="hint" id="st-out"></div>
+    </div>
+    <div class="card"><div class="row"><b id="st-count">—</b><span class="hint">张（有标签的会按话题被挑出来发）</span></div><div id="st-list" style="margin-top:10px"></div></div>
+  </section>
+
+  <!-- ── 音色：用什么嗓子说话（选 / 试听 / 换参考音频）──────── -->
+  <section id="tab-voices" hidden>
+    <div class="card">
+      <h3>RVC 调音台（按需启动）</h3>
+      <p class="lede">调唱歌换声用的音色、变调、索引/保护、试听和存桌面。它不吃模型内存，所以一直开着；9885 换声服务才是用时才拉起来的。</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <button class="primary" id="sv-open">打开调音台</button>
+        <button id="sv-refresh">刷新服务状态</button>
+        <span class="hint" id="sv-state"></span>
+      </div>
+      <div class="hint" id="sv-list"></div>
+    </div>
+    <div class="card">
+      <h3>当前音色</h3>
+      <p class="lede">决定它开口时是什么声音。左边是 Windows 自带音色（选一个就行）；右边是本地克隆引擎，靠一段参考音频把音色搬过来。</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <select id="vo-engine" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)">
+          <option value="sapi">Windows 离线语音（SAPI）</option>
+          <option value="local">本地克隆引擎（GPT-SoVITS）</option>
+        </select>
+        <select id="vo-sapi" style="flex:1;min-width:220px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)"></select>
+        <input id="vo-endpoint" placeholder="http://127.0.0.1:9881" style="flex:1;min-width:200px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)">
+      </div>
+      <div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap">
+        <input id="vo-ref" placeholder="参考音频绝对路径（点下面的档案自动填）" style="flex:2;min-width:260px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)">
+        <input id="vo-speed" type="number" step="0.05" min="0.5" max="2" value="1" style="width:90px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)">
+      </div>
+      <div class="row" style="margin-top:8px;gap:8px">
+        <input id="vo-reftext" placeholder="参考音频里说的那句原文（有它更像，没有也能跑）" style="flex:1;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)">
+        <button id="vo-saveref">存原文</button>
+      </div>
+      <div class="row" style="margin-top:10px;gap:8px">
+        <input id="vo-text" placeholder="要它念的话" value="主人，我在呢，今天也乖乖等你回来。" style="flex:1;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)">
+        <button class="primary" id="vo-test">试听</button>
+        <button id="vo-save">保存</button>
+      </div>
+      <div class="hint" id="vo-out"></div>
+      <audio id="vo-audio" controls style="width:100%;margin-top:10px;display:none"></audio>
+    </div>
+
+    <div class="card">
+      <h3>发一条真语音（验证接入）</h3>
+      <p class="lede">试听只是合成给自己听；这里是真发到 QQ。填 QQ 号 = 私聊发给那个人（自己测最方便），填群号 = 发到群里。</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <input id="vo-send-group" placeholder="群号（留空则用 QQ 号私聊）" style="flex:1;min-width:200px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)">
+        <input id="vo-send-user" placeholder="QQ 号（你自己）" style="width:200px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)">
+        <button class="primary" id="vo-send">发语音</button>
+      </div>
+      <div class="hint" id="vo-sendout"></div>
+    </div>
+
+    <div class="card">
+      <h3>音色档案（参考音频）</h3>
+      <p class="lede">每段干净的人声都能当一个音色。点「用这个」= 切到它；CPU 上零样本克隆一句要几秒。</p>
+      <div id="vo-refs"></div>
+    </div>
+  </section>
+
+  <!-- ── 日记：她自己的那一天 ─────────────────────────── -->
+  <section id="tab-diary" hidden>
+    <div class="card">
+      <h3>她的日记</h3>
+      <p class="lede">记忆记的是“关于你的事”，日记写的是“她自己的一天”。每天过了设定时间会自动写一条；这里也可以手动让她现在写。</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <button class="primary" id="dy-write">让她现在写一条</button>
+        <input id="dy-hint" placeholder="今晚想让她写点什么（可空）" style="flex:1;min-width:220px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)">
+        <span class="hint" id="dy-stats"></span>
+      </div>
+      <div class="hint" id="dy-out"></div>
+    </div>
+    <div class="card">
+      <h3>最近的日记</h3>
+      <div id="dy-list"></div>
+    </div>
+  </section>
+
+  <!-- ── QQ空间：发说说（需要 SnowLuma 当网关，NapCat 没有这个动作）── -->
+  <section id="tab-qzone" hidden>
+    <div class="card">
+      <h3>发一条说说</h3>
+      <p class="lede">发在机器人自己的 QQ 空间。走的是 SnowLuma 的扩展动作；NapCat 没有这几个动作，会提示「不支持的API」——那就得先把网关换成 SnowLuma。</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <textarea id="qz-text" placeholder="今天想说点什么…" style="min-height:90px;flex:1;min-width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)"></textarea>
+      </div>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <label for="qz-right">可见范围</label>
+        <select id="qz-right">
+          <option value="1">所有人可见</option>
+          <option value="4">好友可见</option>
+          <option value="64">仅自己可见</option>
+        </select>
+        <button class="primary" id="qz-send">发出去</button>
+        <button id="qz-refresh">刷新</button>
+        <span class="hint" id="qz-state"></span>
+      </div>
+      <div class="hint" id="qz-out"></div>
+    </div>
+    <div class="card">
+      <h3>空间里最近的说说</h3>
+      <p class="lede" id="qz-live-hint">线上列表读不到时，下面显示本机发过的记录。</p>
+      <div id="qz-list"></div>
+    </div>
+  </section>
+
+  <!-- ── 人格：角色卡热加载，切换/保存都是立即生效 ───────── -->
+  <section id="tab-persona" hidden>
+    <div class="card">
+      <div class="growth-head">
+        <div><h2>一点点长成自己的样子</h2><p class="growth-sub">底层性格是起点，后天习惯在相处中慢慢形成。</p></div>
+        <div class="row"><span class="growth-badge" id="pe-growth-badge">读取中</span><button id="pe-growth-refresh">刷新成长状态</button></div>
+      </div>
+      <div class="growth-fixed"><span class="hint">固定身份 · 不参与成长</span><strong id="pe-growth-identity">以当前角色卡为准</strong><p>这层关系不会被争执、长时间不聊天或重置成长记录改变。</p></div>
+      <div id="pe-growth-error" role="alert"></div>
+      <div class="growth-layout">
+        <div class="growth-panel">
+          <h3>正在形成的表达习惯</h3>
+          <p class="growth-sub" id="pe-growth-summary">正在读取当前角色的成长记录…</p>
+          <div id="pe-growth"></div>
+          <div class="growth-info"><span id="pe-growth-role">当前角色 —</span><span id="pe-growth-people">相处记录 —</span></div>
+          <details><summary>这些变化怎么看？</summary><p class="growth-note">中线代表原有性格，左右表示后天表达倾向，不是好坏评分，也不是人格完成度。偏移最多为 ±25，微小变化还未必影响回复。</p><p class="growth-note">一致反馈至少跨 3 个不同日期才开始积累；同一人一天最多贡献一次。没有新强化时，习惯会慢慢淡化。熟悉度只影响相处方式，不改变家人身份。</p></details>
+        </div>
+        <div class="growth-panel">
+          <h3>成长节奏</h3>
+          <div class="growth-control"><label><input type="checkbox" id="pe-growth-enabled" disabled>应用后天习惯</label><p>关闭后沿用底层性格，停止学习，已有记录保留。</p></div>
+          <div class="growth-control"><label><input type="checkbox" id="pe-growth-learning" disabled>从相处中继续学习</label><p id="pe-growth-learning-note">暂停后保留已有习惯，仍会随时间自然淡化。</p></div>
+          <div class="growth-control"><label for="pe-growth-days">习惯淡化周期</label><div class="row" style="margin-top:8px"><input id="pe-growth-days" type="number" min="14" max="365" step="1" value="90" disabled><span>天后减半</span></div><p>未被强化的习惯与熟悉度在这个周期后减半。14～365 天，默认 90 天。</p></div>
+          <p class="growth-note">这组开关对所有角色生效；每个角色的成长记录分别保存。</p>
+          <button class="primary" id="pe-growth-save" disabled style="margin-top:12px">保存成长设置</button>
+          <div id="pe-growth-status" role="status" aria-live="polite"></div>
+          <div class="growth-reset"><button id="pe-growth-reset" disabled>重置当前角色的成长</button><p>清除这个角色的后天习惯和熟悉度。固定身份、底层角色卡和其他角色不受影响。</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <details class="growth-editor"><summary>底层角色卡 · 查看与编辑</summary>
+        <p class="growth-note">这里保存固定身份和原本的性格。自动成长不会改写；手动保存后下一条消息生效。</p>
+        <div class="row" style="margin-top:12px">
+          <label for="pe-role">角色卡</label><select id="pe-role"></select><button id="pe-switch">切换</button>
+          <button class="primary" id="pe-save">保存到当前卡</button><span class="hint" id="pe-chars"></span>
+        </div>
+        <textarea id="pe-text" aria-label="当前底层角色卡"></textarea>
+        <div class="row" style="margin-top:10px"><input id="pe-newid" placeholder="新角色名"><button id="pe-saveas">另存为新角色卡</button></div>
+        <div class="hint" id="pe-out"></div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ── 知识库：看得到喂了什么资料 ───────────────────── -->
+  <section id="tab-kb" hidden>
+    <div class="card">
+      <h3>知识库</h3><p class="lede">目录里的 .md / .txt 会被切块，按关键词命中后注入上下文。每块不超过 900 字命中率最高。</p>
+      <div class="row"><button id="kb-reload">重新扫描</button><span class="hint" id="kb-dir"></span></div>
+      <div id="kb-list"></div>
+    </div>
+  </section>
+
+  <!-- ── 记忆：模型说"值得记"才会进来 ─────────────────── -->
+  <section id="tab-memory" hidden>
+    <div class="card">
+      <h3>长期记忆</h3><p class="lede">只有模型认为"值得长期记住"的事才会写进来（群里约定、称呼习惯这类）。按重要性 × 时效排序后注入。</p>
+      <div class="row"><input id="mem-text" placeholder="手动加一条（例如：周五晚八点开组会）" style="flex:1;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)"><button class="primary" id="mem-add">添加</button><button id="mem-clear">清空</button></div>
+      <div id="mem-list" style="margin-top:10px"></div>
+    </div>
+    <div class="card">
+      <h3>按人记账</h3>
+      <p class="lede">记忆挂在 QQ 号上，不是挂在会话上——同一个人换群、换私聊，它认识的是同一个人。模型说“值得记”的事会同时进到对应那本账里。</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <input id="pp-id" placeholder="QQ 号" style="width:150px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)">
+        <input id="pp-fact" placeholder="他告诉过你的事实（可空）" style="flex:1;min-width:180px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)">
+        <input id="pp-trait" placeholder="他这个人（可空）" style="flex:1;min-width:160px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)">
+        <button class="primary" id="pp-add">记一条</button>
+      </div>
+      <div class="hint" id="pp-out"></div>
+      <div id="pp-list" style="margin-top:10px"></div>
+    </div>
+  </section>
+
+  <!-- ── 事件：实时流，排查全靠它 ─────────────────────── -->
+  <section id="tab-events" hidden>
+    <div class="card">
+      <div class="row"><button id="ev-tester">测一下模型</button><span class="hint" id="ev-test-out"></span><span class="sp"></span><span class="hint">事件按时间倒序，最多留 200 条</span></div>
+    </div>
+    <div class="card"><div id="events"></div></div>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   控制台前端（单文件、零构建）。
+   数据来源：
+     /api/status  运行状态（每 3 秒轮询）
+     /api/fields  设置项的中文说明书（进设置页时拉一次）
+     /api/config  当前配置值
+     /api/events  SSE 事件流
+   ============================================================ */
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const toast = (t) => { const el = $('#toast'); el.textContent = t; el.classList.add('on'); setTimeout(() => el.classList.remove('on'), 1800); };
+
+async function api(p, body) {
+  const r = await fetch(p, body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  return r.json();
+}
+
+// 主题
+if (localStorage.getItem('ff-dark') === '1') document.body.dataset.dark = '1';
+$('#theme').onclick = () => { const on = document.body.dataset.dark === '1'; on ? delete document.body.dataset.dark : document.body.dataset.dark = '1'; localStorage.setItem('ff-dark', on ? '0' : '1'); };
+$('#reload').onclick = () => location.reload();
+
+// 分区切换（带地址栏锚点：点哪个分区地址栏就变成 #voices，刷新/收藏都停在这一页）
+const TABS = ['home', 'models', 'config', 'persona', 'kb', 'stickers', 'voices', 'diary', 'qzone', 'memory', 'events'];
+function switchTab(t) {
+  if (!TABS.includes(t)) t = 'home';
+  document.querySelectorAll('#tabs button').forEach((x) => x.setAttribute('aria-selected', String(x.dataset.tab === t)));
+  for (const id of TABS) $('#tab-' + id).hidden = id !== t;
+  if (location.hash.slice(1) !== t) history.replaceState(null, '', '#' + t);
+  if (t === 'models') loadModels();
+  if (t === 'config') loadConfig();
+  if (t === 'stickers') loadStickers();
+  if (t === 'voices') loadVoices();
+  if (t === 'diary') loadDiary();
+  if (t === 'qzone') loadQzone();
+  if (t === 'persona') loadPersona();
+  if (t === 'kb') loadKb();
+  if (t === 'memory') { loadMemory(); loadPeople(); }
+}
+document.querySelectorAll('#tabs button').forEach((b) => { b.onclick = () => switchTab(b.dataset.tab); });
+window.addEventListener('hashchange', () => switchTab(location.hash.slice(1)));
+switchTab(location.hash.slice(1) || 'home');
+
+/* ── 概览 ─────────────────────────────────────────────── */
+let kbInfo = null;
+async function loadStatus() {
+  const s = await api('/api/status');
+  if (!s.ok) return;
+  kbInfo = s.kb;
+  $('#dot').className = 'dot' + (s.connected ? ' on' : '');
+  $('#ver').textContent = 'v' + s.version;
+  $('#mode').textContent = s.dryRun ? '演练模式（不发消息）' : '线上模式';
+  $('#mode').className = 'pill' + (s.dryRun ? ' dry' : '');
+  const m = s.metrics || {};
+  const caps = s.caps || {};
+  const chatRoute = (s.routes || []).find((x) => x.purpose === 'chat') || {};
+  const gateRoute = (s.routes || []).find((x) => x.purpose === 'gate') || {};
+  const items = [
+    ['NapCat 连接', s.connected ? '已连接' : '未连接'],
+    ['机器人账号', s.selfId || '—'],
+    ['主人', (s.relation && s.relation.ownerUin && s.relation.ownerUin.length)
+      ? s.relation.ownerUin.join('、') + (s.relation.alwaysReply ? '（必回）' : '')
+      : '没配 → 所有人都是群友距离'],
+    ['收 / 回', (m.received || 0) + ' / ' + (m.replies || 0)],
+    ['跳过 / 去重', (m.skipped || 0) + ' / ' + (m.deduped || 0)],
+    ['拦下的自曝', (s.guard && s.guard.blocked) || 0],
+    ['记忆条数', s.memory || 0],
+    ['知识库', ((s.kb && s.kb.files) || 0) + ' 个文件'],
+    ['聊天模型', chatRoute.model ? `${chatRoute.model} @ ${chatRoute.channelName}` : s.model],
+    ['把关模型', gateRoute.model || '—'],
+    ['主动发言', (s.gate && s.gate.proactive) || 0],
+    ['冷却 / 上限挡下', (s.gate ? (s.gate.cooldownHits || 0) + (s.gate.hourlyHits || 0) : 0)],
+    ['把关兜底次数', (s.gate && s.gate.fallback) || 0],
+    ['识图 / 生图 / 语音', (caps.vision ? '开' : '关') + ' / ' + (caps.gen ? '开' : '关') + ' / ' + (caps.tts ? '开' : '关')],
+    ['已运行', Math.round((s.uptimeSec || 0) / 60) + ' 分钟'],
+    ['控制台端口', s.consolePort],
+    ['数据目录', s.dataDir]
+  ];
+  $('#stats').innerHTML = items.map(([k, v]) => `<div class="kv"><b>${esc(k)}</b><span>${esc(v)}</span></div>`).join('');
+}
+
+$('#say-btn').onclick = async () => {
+  const r = await api('/api/say', { groupId: $('#say-group').value.trim(), text: $('#say-text').value.trim() });
+  $('#say-out').textContent = r.ok ? ('完成' + (r.dryRun ? '（演练模式，没真发）' : '，已发送')) : ('失败：' + r.error);
+};
+
+/* ── 模型：渠道 + 四个用途的路由 ──────────────────────── */
+let modelsData = null;
+
+async function loadModels() {
+  const r = await api('/api/models');
+  if (!r.ok) return;
+  modelsData = r;
+  renderRoutes(r);
+  renderChannels(r);
+}
+
+const modelLabel = (m) => `${m.name || m.id}${m.contextWindow ? ' · ' + Math.round(m.contextWindow / 1000) + 'k' : ''}${(m.input || []).includes('image') ? ' · 可看图' : ''}`;
+
+function renderRoutes(r) {
+  const groups = new Map();
+  for (const m of r.models) {
+    if (!groups.has(m.channelName)) groups.set(m.channelName, []);
+    groups.get(m.channelName).push(m);
+  }
+  const options = [...groups.entries()].map(([name, list]) =>
+    `<optgroup label="${esc(name)}">${list.map((m) => `<option value="${esc(m.route)}">${esc(modelLabel(m))}</option>`).join('')}</optgroup>`).join('');
+
+  $('#routes').innerHTML = r.purposes.map((p) => {
+    const cur = (r.routes || []).find((x) => x.purpose === p.id) || {};
+    const noKey = cur.hasKey ? '' : '<span class="tag" style="color:var(--bad);border-color:var(--bad)">渠道缺密钥</span>';
+    const fb = cur.fallback ? '<span class="tag">渠道不存在，已回退默认</span>' : '';
+    return `<div class="field">
+      <div class="top"><label>${esc(p.label)}</label><span class="key">${esc(p.key)}</span>${noKey}${fb}</div>
+      <div class="hint">${esc(p.hint)}　现在：<b>${esc(cur.model || '—')}</b> @ ${esc(cur.channelName || '')}</div>
+      <div class="row"><select data-purpose="${esc(p.id)}">
+        <option value="">（用默认模型）</option>
+        ${options}
+      </select></div>
+    </div>`;
+  }).join('') + `<div class="hint" style="margin-top:8px">切换即时生效，不用重启。识图那一项要选「可看图」的模型，否则看图会失败。</div>`;
+
+  document.querySelectorAll('#routes select').forEach((el) => {
+    const cur = (modelsData.routes || []).find((x) => x.purpose === el.dataset.purpose) || {};
+    const exists = (modelsData.models || []).some((m) => m.route === (cur.route || ''));
+    el.value = exists ? cur.route : '';
+    el.onchange = async () => {
+      const res = await api('/api/models/route', { purpose: el.dataset.purpose, route: el.value });
+      if (res.ok) { toast('已切换'); loadModels(); loadStatus(); }
+      else toast('切换失败：' + res.error);
+    };
+  });
+}
+
+function renderChannels(r) {
+  $('#channels').innerHTML = r.channels.map((c) => `
+    <div class="card" style="margin:0 0 10px;padding:12px 14px">
+      <div class="row">
+        <b>${esc(c.name)}</b>
+        ${c.isDefault ? '<span class="tag">默认渠道（= 设置页里的接口地址/密钥）</span>' : `<span class="tag">${esc(c.id)}</span>`}
+        <span class="hint">${esc(c.apiBase || '未填地址')}</span>
+        ${c.hasKey ? `<span class="hint">密钥 ${esc(c.keyHint)}</span>` : '<span class="tag" style="color:var(--bad);border-color:var(--bad)">缺密钥</span>'}
+      </div>
+      <div class="hint" style="margin-top:6px">${c.models.length ? c.models.map((m) => esc(modelLabel(m))).join(' · ') : '还没有模型清单，点上面「刷新模型清单」问接口要'}</div>
+    </div>`).join('') || '<div class="hint">一个渠道都没有。</div>';
+}
+
+$('#md-import').onclick = async () => {
+  $('#md-out').textContent = '正在读 DSH 配置…';
+  const r = await api('/api/models/import', {});
+  if (r.ok) { $('#md-out').textContent = `导入完成：新增 ${r.summary.added}、更新 ${r.summary.updated}、共 ${r.summary.models} 个模型`; toast('已从 DSH 导入'); loadModels(); }
+  else $('#md-out').textContent = '没导入：' + (r.error || '未知原因');
+};
+$('#md-refresh').onclick = async () => {
+  $('#md-out').textContent = '正在问各渠道的 /models…';
+  const r = await api('/api/models/refresh', {});
+  if (r.ok) { $('#md-out').textContent = (r.report || []).map((x) => `${x.channelName}：${x.ok ? x.models + ' 个模型' : '失败（' + x.error + '）'}`).join('；'); loadModels(); }
+  else $('#md-out').textContent = '刷新失败：' + r.error;
+};
+$('#md-reload').onclick = () => loadModels();
+
+/* ── 设置：按 /api/fields 分区渲染 ─────────────────────── */
+let fieldGroups = [];
+let cfgOrig = {};
+let cfgNow = {};
+
+async function loadConfig() {
+  if (!fieldGroups.length) {
+    const f = await api('/api/fields');
+    if (f.ok) fieldGroups = f.groups;
+  }
+  const r = await api('/api/config');
+  if (!r.ok) return;
+  cfgNow = { ...r.config };
+  cfgOrig = { ...r.config };
+  renderSettings();
+}
+
+function fieldInput(key, meta, value) {
+  const v = value === undefined || value === null ? '' : value;
+  if (meta.type === 'bool') {
+    return `<label class="switch"><input type="checkbox" data-k="${esc(key)}" ${v ? 'checked' : ''}> ${v ? '开' : '关'}</label>`;
+  }
+  if (meta.type === 'select') {
+    return `<select data-k="${esc(key)}">${(meta.options || []).map((o) => `<option value="${esc(o)}"${String(v) === String(o) ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
+  }
+  if (meta.type === 'list') {
+    const s = Array.isArray(v) ? v.join(',') : String(v ?? '');
+    return `<input type="text" data-k="${esc(key)}" value="${esc(s)}" placeholder="逗号分隔">`;
+  }
+  const type = meta.type === 'number' ? 'number' : (meta.type === 'password' ? 'password' : 'text');
+  return `<input type="${type}" data-k="${esc(key)}" value="${esc(v)}" ${meta.type === 'password' ? 'placeholder="留空 = 不修改"' : ''}>`;
+}
+
+function renderSettings() {
+  const showAdv = $('#cfg-adv').checked;
+  $('#cfg-form').innerHTML = fieldGroups.map((g) => {
+    const normal = g.fields.filter((f) => !f.advanced);
+    const adv = g.fields.filter((f) => f.advanced);
+    if (!normal.length && !adv.length) return '';
+    const row = (f) => {
+      const v = cfgNow[f.key];
+      const shown = f.type === 'password' && v ? '******' : v;
+      return `<div class="field" data-field="${esc(f.key)}">
+        <div class="top"><label>${esc(f.label)}</label><span class="key">${esc(f.key)}</span>${f.advanced ? '<span class="tag">高级</span>' : ''}</div>
+        ${f.hint ? `<div class="hint">${esc(f.hint)}</div>` : ''}
+        <div class="row">${fieldInput(f.key, f, shown)}${f.unit ? `<span class="unit">${esc(f.unit)}</span>` : ''}</div>
+      </div>`;
+    };
+    const advHtml = adv.length ? `<details${showAdv ? ' open' : ''}><summary>高级项（${adv.length}）</summary>${adv.map(row).join('')}</details>` : '';
+    // 联网这组多给一个"试搜一句"：不用等群里问，直接看它自己的搜索通道通不通
+    const searchTest = g.id !== 'net' ? '' : `<div class="field" data-field="__ws">
+        <div class="top"><label>试搜一句</label><span class="key">web.search</span></div>
+        <div class="hint">用它自己的通道真搜一次，看能不能搜到、抓回来的正文是什么</div>
+        <div class="row"><input id="ws-q" type="text" placeholder="红烧肉 做法" value="红烧肉 做法"><button id="ws-go">搜一下</button></div>
+        <pre id="ws-out" class="hint" style="white-space:pre-wrap;margin:8px 0 0;max-height:260px;overflow:auto"></pre>
+      </div>`;
+    return `<div class="card"><h3>${esc(g.name)}</h3><p class="lede">${esc(g.hint)}</p>${normal.map(row).join('')}${advHtml}${searchTest}</div>`;
+  }).join('');
+  document.querySelectorAll('#cfg-form [data-k]').forEach((el) => { el.oninput = el.onchange = markChanged; });
+  const wsGo = $('#ws-go');
+  if (wsGo) wsGo.onclick = async () => {
+    const out = $('#ws-out');
+    wsGo.disabled = true;
+    out.textContent = '搜…';
+    try {
+      const r = await api('/api/search', { q: $('#ws-q').value });
+      out.textContent = r.block || ('没搜到：' + (r.error || '空结果'));
+    } catch (e) { out.textContent = '失败：' + e.message; }
+    finally { wsGo.disabled = false; }
+  };
+  markChanged();
+}
+
+function readField(key, el) {
+  const meta = fieldGroups.flatMap((g) => g.fields).find((f) => f.key === key) || {};
+  if (meta.type === 'bool') return el.checked;
+  if (meta.type === 'number') { const n = Number(el.value); return Number.isFinite(n) ? n : 0; }
+  if (meta.type === 'list') return String(el.value).split(',').map((s) => s.trim()).filter(Boolean);
+  return el.value;
+}
+
+function markChanged() {
+  let n = 0;
+  document.querySelectorAll('#cfg-form [data-k]').forEach((el) => {
+    const k = el.dataset.k;
+    const meta = fieldGroups.flatMap((g) => g.fields).find((f) => f.key === k) || {};
+    if (meta.type === 'password' && el.value === '******') { el.closest('.field').classList.remove('changed'); return; }
+    const cur = readField(k, el);
+    const orig = cfgOrig[k];
+    const same = JSON.stringify(cur) === JSON.stringify(orig);
+    el.closest('.field').classList.toggle('changed', !same);
+    if (!same) n++;
+  });
+  $('#cfg-count').textContent = n ? `有 ${n} 项改动` : '没有改动';
+}
+
+$('#cfg-adv').onchange = () => { const c = cfgOrig; cfgOrig = cfgNow; renderSettings(); cfgOrig = c; markChanged(); };
+
+$('#cfg-save').onclick = async () => {
+  const body = {};
+  document.querySelectorAll('#cfg-form [data-k]').forEach((el) => {
+    const k = el.dataset.k;
+    const meta = fieldGroups.flatMap((g) => g.fields).find((f) => f.key === k) || {};
+    if (meta.type === 'password' && (el.value === '******' || el.value === '')) return; // 不动密钥
+    const cur = readField(k, el);
+    if (JSON.stringify(cur) !== JSON.stringify(cfgOrig[k])) body[k] = cur;
+  });
+  if (!Object.keys(body).length) { toast('没有改动'); return; }
+  const r = await api('/api/config', body);
+  if (r.ok) { toast(`已保存 ${r.applied.length} 项`); await loadConfig(); loadStatus(); }
+  else toast('保存失败：' + r.error);
+};
+$('#cfg-reload').onclick = () => loadConfig();
+
+/* ── 表情库 ───────────────────────────────────────────── */
+async function loadStickers() {
+  const r = await api('/api/stickers?limit=200');
+  if (!r.ok) { $('#st-out').textContent = '读不到素材库：' + (r.error || '未知'); return; }
+  $('#st-count').textContent = r.files || 0;
+  const items = r.items || [];
+  $('#st-list').innerHTML = items.length
+    ? `<ul class="plain">${items.map((it) => `<li>${esc(it.file)} <span class="tag">${it.bytes ? Math.round(it.bytes / 1024) + 'KB' : ''}</span>${(it.tags || []).length ? ' <span class="hint">' + esc((it.tags || []).join(' / ').slice(0, 90)) + '</span>' : ' <span class="tag">还没标签</span>'}</li>`).join('')}</ul>`
+    : '<div class="hint">还是空的。群里有表情就会自己收；也可以在上面填个文件夹批量教它。</div>';
+}
+$('#st-reload').onclick = () => loadStickers();
+$('#st-import').onclick = async () => {
+  const dir = $('#st-dir').value.trim();
+  if (!dir) { $('#st-out').textContent = '先填文件夹路径'; return; }
+  $('#st-out').textContent = '正在一张张看…（图多会慢，别关页面）';
+  const r = await api('/api/stickers/import', { dir, limit: Number($('#st-limit').value) || 100 });
+  if (r.ok) {
+    const p = r.report;
+    $('#st-out').textContent = `看了 ${p.total} 张：新增 ${p.added}、重复 ${p.duplicate}、没看懂先收下 ${p.untagged}、跳过 ${p.failed}`;
+    toast('导入完成');
+    loadStickers();
+  } else $('#st-out').textContent = '导入失败：' + r.error;
+};
+
+/* ── 音色 ─────────────────────────────────────────────── */
+let voicesData = null;
+
+/* 本地服务（TTS/换声/调音台）：按需拉起 + 闲置自动关，这里给个看得见的状态和开关 */
+async function loadServices() {
+  const box = $('#sv-list');
+  const state = $('#sv-state');
+  if (!box) return;
+  const r = await api('/api/services');
+  if (!r.ok) { box.textContent = '读不到服务状态：' + (r.error || ''); return; }
+  state.textContent = r.onDemand ? '按需模式：用时才拉起，闲置自动关' : '常驻模式（voiceOnDemand=false）';
+  box.innerHTML = (r.services || []).map((s) => {
+    const dot = s.up ? '<span style="color:#1a7f37">● 在跑</span>' : '<span style="color:#c33">○ 没跑</span>';
+    const idle = s.idleSec ? `，已闲置 ${Math.round(s.idleSec / 60)} 分钟` : '';
+    const idleTip = s.idleMins ? `，闲置 ${s.idleMins} 分钟自动关` : '，不自动关';
+    return `<div class="row" style="gap:10px;margin:6px 0;flex-wrap:wrap">
+      <b style="min-width:96px">${esc(s.label)}</b>
+      <span class="hint">:${s.port}</span>
+      ${dot}
+      <span class="hint">${idle}${idleTip}${s.starts ? `，拉起过 ${s.starts} 次` : ''}${s.lastError ? ` · ${esc(s.lastError)}` : ''}</span>
+      <button data-svc="${esc(s.name)}" data-act="${s.up ? 'stop' : 'start'}" style="margin-left:auto">${s.up ? '停掉' : '启动'}</button>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('button[data-svc]').forEach((b) => {
+    b.onclick = async () => {
+      b.disabled = true;
+      const act = b.dataset.act;
+      const out = await api('/api/services', { name: b.dataset.svc, action: act === 'stop' ? 'stop' : 'start' });
+      toast(out.ok ? (act === 'stop' ? '已停掉' : '已启动') : ('没成功：' + (out.error || '')));
+      loadServices();
+      b.disabled = false;
+    };
+  });
+}
+$('#sv-open').onclick = () => window.open('http://127.0.0.1:9887/', '_blank');
+$('#sv-refresh').onclick = () => loadServices();
+
+async function loadVoices() {
+  loadServices();
+  const r = await api('/api/voices');
+  if (!r.ok) return;
+  voicesData = r;
+  const cur = r.current || {};
+  $('#vo-engine').value = cur.engine || 'sapi';
+  $('#vo-endpoint').value = cur.endpoint || '';
+  $('#vo-ref').value = cur.refAudio || '';
+  $('#vo-reftext').value = cur.refText || '';
+  $('#vo-speed').value = cur.speed || 1;
+
+  // SAPI 音色下拉
+  const sel = $('#vo-sapi');
+  const list = r.sapi || [];
+  sel.innerHTML = list.length
+    ? list.map((v) => `<option value="${esc(v.name)}">${esc(v.name)}${v.culture ? '（' + esc(v.culture) + '）' : ''}</option>`).join('')
+    : '<option value="">（系统里没找到可用音色）</option>';
+  if (cur.voice) {
+    const hit = list.find((v) => v.name === cur.voice);
+    if (hit) sel.value = cur.voice;
+  }
+
+  // 引擎健康
+  const h = r.health || {};
+  $('#vo-out').textContent = cur.engine === 'local'
+    ? (h.ok ? `本地引擎在线（${h.probe} ${h.status}）` : `本地引擎连不上：${h.reason || h.status || '未知'}`)
+    : `当前用 Windows 离线音色；本地引擎${h.ok ? '在线' : '未连上'}（切过去就能用）`;
+
+  // 参考音频档案
+  const refs = r.refs || [];
+  $('#vo-refs').innerHTML = refs.length ? refs.map((v) => `
+    <div class="card" style="margin:0 0 10px;padding:12px 14px">
+      <div class="row" style="flex-wrap:wrap;gap:8px">
+        <b>${esc(v.name)}</b>
+        ${v.selected ? '<span class="tag">当前音色</span>' : ''}
+        <span class="hint">${(v.bytes / 1024).toFixed(0)} KB</span>
+        <span style="flex:1"></span>
+        <button data-use="${esc(v.name)}" class="primary">用这个</button>
+      </div>
+      <audio controls preload="none" src="${esc(v.url)}" style="width:100%;margin-top:8px"></audio>
+      <input data-reftext="${esc(v.name)}" value="${esc(v.text || '')}" placeholder="这段里说的原文（可选）"
+        style="width:100%;margin-top:8px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)">
+    </div>`).join('') : '<div class="hint">data/voice 里还没有参考音频。放一段干净的人声 wav 进去，刷新就能看到。</div>';
+
+  document.querySelectorAll('#vo-refs [data-use]').forEach((b) => {
+    b.onclick = async () => {
+      const name = b.dataset.use;
+      const box = document.querySelector(`#vo-refs [data-reftext="${name}"]`);
+      const res = await api('/api/voices/use', { name, text: box ? box.value : '', endpoint: $('#vo-endpoint').value.trim() });
+      if (res.ok) { toast('已切到这个音色'); loadVoices(); loadStatus(); }
+      else toast('切换失败：' + res.error);
+    };
+  });
+}
+
+async function testVoice() {
+  const btn = $('#vo-test');
+  const text = $('#vo-text').value.trim() || '主人，我在呢。';
+  btn.disabled = true;
+  $('#vo-out').textContent = '正在合成…（CPU 上零样本要几秒）';
+  try {
+    const r = await api('/api/voices/test', {
+      text,
+      engine: $('#vo-engine').value,
+      voice: $('#vo-sapi').value,
+      endpoint: $('#vo-endpoint').value.trim(),
+      refAudio: $('#vo-ref').value.trim(),
+      refText: $('#vo-reftext').value.trim(),
+      speed: Number($('#vo-speed').value) || 1
+    });
+    if (r.ok) {
+      const a = $('#vo-audio');
+      a.src = r.url + '&t=' + Date.now();
+      a.style.display = 'block';
+      a.play().catch(() => {});
+      $('#vo-out').textContent = `合成好了：${esc(r.engine)}，${(r.ms / 1000).toFixed(2)} 秒`;
+    } else {
+      $('#vo-out').textContent = '失败：' + (r.error || '未知');
+    }
+  } finally { btn.disabled = false; }
+}
+
+$('#vo-test').onclick = testVoice;
+$('#vo-send').onclick = async () => {
+  const btn = $('#vo-send');
+  const text = $('#vo-text').value.trim() || '主人，我在呢。';
+  const groupId = $('#vo-send-group').value.trim();
+  const userId = $('#vo-send-user').value.trim();
+  if (!groupId && !userId) { $('#vo-sendout').textContent = '群号或 QQ 号填一个'; return; }
+  btn.disabled = true;
+  $('#vo-sendout').textContent = '正在合成并发送…';
+  try {
+    const r = await api('/api/say/voice', { text, groupId, userId });
+    if (r.ok && r.dryRun) $('#vo-sendout').textContent = '演练模式下没有真发（合成好了：' + (r.ms / 1000).toFixed(2) + ' 秒）';
+    else if (r.ok) $('#vo-sendout').textContent = `已发到 ${r.target}：合成 ${r.synthSec}s，音频 ${(r.ms / 1000).toFixed(2)}s，引擎 ${r.engine}，NapCat 回 ${JSON.stringify(r.result)}`;
+    else $('#vo-sendout').textContent = '失败：' + (r.error || '未知');
+  } finally { btn.disabled = false; }
+};
+$('#vo-save').onclick = async () => {
+  const body = {
+    ttsEnabled: true,
+    ttsEngine: $('#vo-engine').value,
+    ttsVoice: $('#vo-sapi').value,
+    ttsEndpoint: $('#vo-endpoint').value.trim(),
+    ttsRefAudio: $('#vo-ref').value.trim(),
+    ttsRefText: $('#vo-reftext').value.trim(),
+    ttsSpeed: Number($('#vo-speed').value) || 1
+  };
+  const r = await api('/api/config', body);
+  if (r.ok) { toast('音色设置已保存'); loadVoices(); loadStatus(); }
+  else toast('保存失败：' + r.error);
+};
+$('#vo-saveref').onclick = async () => {
+  const full = $('#vo-ref').value.trim();
+  if (!full) { toast('先指定一个参考音频'); return; }
+  const name = full.split(/[\\/]/).pop();
+  const r = await api('/api/voices/ref-text', { name, text: $('#vo-reftext').value.trim() });
+  toast(r.ok ? '原文已存' : '存失败：' + r.error);
+  loadVoices();
+};
+$('#vo-engine').onchange = () => {
+  const local = $('#vo-engine').value === 'local';
+  $('#vo-endpoint').style.opacity = local ? '1' : '0.5';
+  $('#vo-ref').style.opacity = local ? '1' : '0.5';
+};
+
+/* ── 日记 ─────────────────────────────────────────────── */
+async function loadDiary() {
+  const r = await api('/api/diary?n=20');
+  if (!r.ok) { $('#dy-list').innerHTML = '<div class="hint">' + esc(r.error || '读不到日记') + '</div>'; return; }
+  const s = r.stats || {};
+  $('#dy-stats').textContent = `共 ${s.count || 0} 条 · ${s.days || 0} 天 · 今天 ${s.today || 0} 条`;
+  const rows = (r.entries || []).slice().reverse();
+  $('#dy-list').innerHTML = rows.length ? rows.map((e) => `
+    <div class="card" style="margin:0 0 10px;padding:12px 14px">
+      <div class="row"><b>${esc(e.day)} ${esc(e.time)}</b>
+        ${e.mood ? '<span class="tag">' + esc(e.mood) + '</span>' : ''}
+        ${e.title ? '<span class="hint">「' + esc(e.title) + '」</span>' : ''}</div>
+      <div style="margin-top:6px;white-space:pre-wrap;line-height:1.6">${esc(e.text)}</div>
+      ${(e.tags || []).length ? '<div class="hint" style="margin-top:6px">' + e.tags.map(esc).join(' · ') + '</div>' : ''}
+    </div>`).join('') : '<div class="hint">日记还是空的。过一天，或者点上面的「让她现在写一条」。</div>';
+}
+$('#dy-write').onclick = async () => {
+  const btn = $('#dy-write');
+  btn.disabled = true;
+  $('#dy-out').textContent = '她想一会儿…（写一条要几秒到半分钟）';
+  try {
+    const r = await api('/api/diary', { write: true, hint: $('#dy-hint').value.trim() });
+    $('#dy-out').textContent = r.ok ? `写好了：${r.entry.title || ''} ${r.entry.text.slice(0, 30)}…` : ('失败：' + (r.error || '未知'));
+    if (r.ok) { $('#dy-hint').value = ''; loadDiary(); }
+  } finally { btn.disabled = false; }
+};
+
+/* ── QQ空间 ───────────────────────────────────────────── */
+async function loadQzone() {
+  const r = await api('/api/qzone?n=20');
+  if (!r.ok) { $('#qz-list').innerHTML = '<div class="hint">' + esc(r.error || '读不到空间') + '</div>'; return; }
+  $('#qz-state').textContent = r.enabled ? '日记会自动发到空间' : '日记自动发空间：关（在「设置」里开）';
+  const sel = $('#qz-right');
+  if (sel && r.ugcRight) sel.value = String(r.ugcRight);
+  const live = r.live && Array.isArray(r.live.items) ? r.live.items : null;
+  if (r.error) {
+    $('#qz-live-hint').textContent = '线上列表读不到：' + r.error + '（下面这些是本机发过的记录）';
+  } else if (live) {
+    $('#qz-live-hint').textContent = `空间里共 ${r.live.total} 条说说`;
+  }
+  const rows = live && live.length ? live.map((m) => ({ text: m.content, time: m.time, comments: m.comments, tid: m.tid, priv: m.isPrivate, iso: true }))
+    : (r.local || []).map((m) => ({ text: m.text, time: m.at, error: m.error, tid: m.tid, priv: m.ugc === 64 }));
+  $('#qz-list').innerHTML = rows.length ? rows.map((m) => `
+    <div class="card" style="margin:0 0 10px;padding:12px 14px">
+      <div class="row"><b>${esc(new Date(m.time || Date.now()).toLocaleString())}</b>
+        ${m.comments ? '<span class="tag">' + m.comments + ' 条评论</span>' : ''}
+        ${m.priv ? '<span class="tag" style="color:#c33">仅自己可见</span>' : ''}
+        ${m.error ? '<span class="tag" style="color:#c33">没发出去</span>' : ''}</div>
+      <div style="margin-top:6px;white-space:pre-wrap;line-height:1.6">${esc(m.text || '')}</div>
+      ${m.error ? '<div class="hint" style="margin-top:6px">' + esc(m.error) + '</div>' : ''}
+      ${m.tid && !m.error && m.iso ? `<div class="row" style="gap:8px;margin-top:8px">
+        <label class="hint" for="qzr-${esc(m.tid)}">可见范围</label>
+        <select class="qz-right-sel" id="qzr-${esc(m.tid)}" data-tid="${esc(m.tid)}">
+          <option value="">当前：${m.priv ? '仅自己可见' : '不私密'}</option>
+          <option value="1">改成所有人可见</option>
+          <option value="4">改成好友可见</option>
+          <option value="64">改成仅自己可见</option>
+        </select>
+        <a href="#" data-tid="${esc(m.tid)}" class="qz-del">删掉这条</a>
+      </div>` : (m.tid && !m.error ? '<div class="hint" style="margin-top:6px"><a href="#" data-tid="' + esc(m.tid) + '" class="qz-del">删掉这条</a></div>' : '')}
+    </div>`).join('') : '<div class="hint">还没有说说。</div>';
+  document.querySelectorAll('.qz-right-sel').forEach((s) => {
+    s.onchange = async () => {
+      const want = Number(s.value);
+      if (!want) return;
+      const r2 = await api('/api/qzone/right', { tid: s.dataset.tid, ugcRight: want });
+      toast(r2.ok ? ('可见范围改成「' + (r2.label || s.value) + '」') : ('没改成：' + (r2.error || '')));
+      loadQzone();
+    };
+  });
+  document.querySelectorAll('.qz-del').forEach((a) => {
+    a.onclick = async (ev) => {
+      ev.preventDefault();
+      const tid = a.dataset.tid;
+      if (!tid || !confirm('删掉这条说说？')) return;
+      const d = await api('/api/qzone/delete', { tid });
+      toast(d.ok ? '删掉了' : ('没删成：' + (d.error || '')));
+      loadQzone();
+    };
+  });
+}
+$('#qz-refresh').onclick = () => loadQzone();
+$('#qz-send').onclick = async () => {
+  const text = ($('#qz-text').value || '').trim();
+  if (!text) { toast('先写点什么'); return; }
+  const btn = $('#qz-send');
+  btn.disabled = true;
+  $('#qz-out').textContent = '正在发…';
+  try {
+    const r = await api('/api/qzone', { content: text, ugcRight: Number($('#qz-right').value) || 1 });
+    $('#qz-out').textContent = r.ok ? `发出去了${r.tid ? '（tid ' + r.tid + '）' : ''}` : ('失败：' + (r.error || '未知'));
+    if (r.ok) { $('#qz-text').value = ''; loadQzone(); }
+  } finally { btn.disabled = false; }
+};
+
+/* ── 人格 / 角色卡 ─────────────────────────────────────── */
+
+let growthDirty = false, growthBusy = false, growthLoaded = false, growthRole = '';
+const growthTraits = {
+  warmth: ['温和程度', '克制直接', '温和体贴'],
+  playfulness: ['俏皮程度', '认真稳重', '轻松俏皮'],
+  brevity: ['表达长短', '展开细节', '简洁紧凑'],
+  initiative: ['接话主动性', '倾听等待', '主动接话']
+};
+function growthControls() {
+  $('#pe-growth-enabled').disabled = growthBusy || !growthLoaded;
+  $('#pe-growth-learning').disabled = growthBusy || !growthLoaded || !$('#pe-growth-enabled').checked;
+  $('#pe-growth-days').disabled = growthBusy || !growthLoaded;
+  $('#pe-growth-save').disabled = growthBusy || !growthLoaded || !growthDirty;
+  $('#pe-growth-reset').disabled = growthBusy || !growthLoaded;
+  $('#pe-growth-refresh').disabled = growthBusy;
+  $('#pe-growth-learning-note').textContent = $('#pe-growth-enabled').checked
+    ? '暂停后保留已有习惯，仍会随时间自然淡化。' : '应用关闭期间不会学习；保留你的学习开关选择。';
+}
+function renderGrowth(r) {
+  const g = r.growth;
+  if (!g || !g.traits) throw new Error('当前服务尚未提供成长状态');
+  growthLoaded = true; growthRole = r.role || '';
+  const mode = !g.enabled ? 'off' : g.learning ? 'on' : 'paused';
+  $('#pe-growth-badge').dataset.mode = mode;
+  $('#pe-growth-badge').textContent = !g.enabled ? '后天习惯已关闭' : g.learning ? '正在慢慢成长' : '新增学习已暂停';
+  $('#pe-growth-identity').textContent = String(r.text || '').includes('固定角色关系：女儿与家长')
+    ? '她是你的女儿，这层关系不变' : '当前角色卡中的核心身份保持不变';
+  $('#pe-growth-role').textContent = '当前角色：' + (r.role || '默认角色');
+  $('#pe-growth-people').textContent = '已记录相处对象：' + Math.max(0, Number(g.partners) || 0) + ' 位';
+  let stable = false;
+  $('#pe-growth').innerHTML = Object.entries(growthTraits).map(([key, labels]) => {
+    const raw = Number(g.traits[key]), v = Number.isFinite(raw) ? Math.max(-.25, Math.min(.25, raw)) : 0;
+    const value = v * 100, strength = Math.abs(v);
+    if (strength >= .015) stable = true;
+    const desc = strength < .015 ? '沿用底层性格' : (strength < .08 ? '轻微偏向 · ' : '渐成习惯 · ') + labels[v > 0 ? 2 : 1];
+    const offset = (value >= 0 ? '+' : '') + value.toFixed(1);
+    return '<div class="growth-trait"><div class="growth-trait-title"><b>' + labels[0] + '</b><span>' + desc + '</span></div>'
+      + '<div class="growth-track" role="meter" aria-label="' + labels[0] + '，' + desc + '" aria-valuemin="-25" aria-valuemax="25" aria-valuenow="' + value.toFixed(1) + '" aria-valuetext="相对底层偏移 ' + offset + '" title="相对底层偏移 ' + offset + '">'
+      + '<div class="growth-fill" style="left:' + (50 + Math.min(0, v) * 200) + '%;width:' + (strength * 200) + '%"></div></div>'
+      + '<div class="growth-axis"><span>' + labels[1] + '</span><span>原有性格</span><span>' + labels[2] + '</span></div></div>';
+  }).join('');
+  $('#pe-growth-summary').textContent = !g.enabled ? '已有记录保留，当前回复暂不应用这些后天倾向。'
+    : stable ? '这些是相对原本性格的轻微倾向，会随持续相处缓慢变化。' : '还没有形成稳定变化。她会先按原本的性格和你相处，不需要刻意刷进度。';
+  if (!growthDirty) {
+    $('#pe-growth-enabled').checked = !!g.enabled;
+    $('#pe-growth-learning').checked = !!g.learning;
+    $('#pe-growth-days').value = Math.max(14, Math.min(365, Number(g.halfLifeDays) || 90));
+  }
+  $('#pe-growth-error').textContent = '';
+  growthControls();
+}
+async function refreshGrowth() {
+  const r = await api('/api/persona');
+  if (!r.ok) throw new Error(r.error || '读取成长状态失败');
+  renderGrowth(r); // 不重载角色卡编辑框，保留尚未保存的文字。
+}
+async function loadPersona() {
+  try {
+    const [r, rl] = await Promise.all([api('/api/persona'), api('/api/roles')]);
+    if (!r.ok) throw new Error(r.error || '读取角色卡失败');
+    $('#pe-text').value = r.text;
+    $('#pe-chars').textContent = r.chars + ' 字';
+    renderGrowth(r);
+    const sel = $('#pe-role');
+    sel.innerHTML = '';
+    for (const x of (rl.roles || [])) {
+      const o = document.createElement('option');
+      o.value = x.id;
+      o.textContent = x.name + '（' + x.chars + ' 字）' + (x.missing ? ' ⚠ 文件不在' : '');
+      if (x.current) o.selected = true;
+      sel.appendChild(o);
+    }
+  } catch (e) { growthLoaded = false; growthControls(); $('#pe-growth-error').textContent = '暂时无法读取：' + e.message + '，请点击刷新重试。'; }
+}
+for (const id of ['pe-growth-enabled', 'pe-growth-learning', 'pe-growth-days']) {
+  $('#' + id).addEventListener('input', () => { growthDirty = true; $('#pe-growth-status').textContent = '有未保存的设置'; growthControls(); });
+}
+$('#pe-growth-refresh').onclick = async () => {
+  growthBusy = true; growthControls();
+  try { await refreshGrowth(); $('#pe-growth-status').textContent = growthDirty ? '状态已刷新，未保存的设置仍保留' : '成长状态已刷新'; }
+  catch(e) { $('#pe-growth-error').textContent = '刷新失败：' + e.message; }
+  finally { growthBusy = false; growthControls(); }
+};
+$('#pe-growth-save').onclick = async () => {
+  const input = $('#pe-growth-days'), days = Number(input.value);
+  if (!input.value.trim() || !Number.isInteger(days) || days < 14 || days > 365) {
+    $('#pe-growth-status').textContent = '请填写 14～365 之间的整数天数'; input.focus(); return;
+  }
+  const body = { personalityPlasticityEnabled: $('#pe-growth-enabled').checked, personalityLearningEnabled: $('#pe-growth-learning').checked, personalityHalfLifeDays: days };
+  growthBusy = true; growthControls();
+  try {
+    const r = await api('/api/config', body);
+    if (!r.ok) throw new Error(r.error || '保存失败');
+    growthDirty = false;
+    $('#pe-growth-status').textContent = '已保存，下一次回复生效';
+    await refreshGrowth();
+  } catch(e) { $('#pe-growth-error').textContent = '操作失败：' + e.message; }
+  finally { growthBusy = false; growthControls(); }
+};
+$('#pe-growth-reset').onclick = async () => {
+  if (!confirm('重置「' + (growthRole || '默认角色') + '」的后天习惯和熟悉度？这步无法撤销。固定身份与底层角色卡不变。')) return;
+  growthBusy = true; growthControls();
+  try {
+    const latest = await api('/api/persona');
+    if (!latest.ok || (latest.role || '') !== growthRole) throw new Error('当前角色已变化，请先刷新再重试');
+    const r = await api('/api/personality/reset', { confirm: true });
+    if (!r.ok) throw new Error(r.error || '重置失败');
+    await refreshGrowth();
+    $('#pe-growth-status').textContent = '成长记录已重置，固定身份与角色卡已保留';
+  } catch(e) { $('#pe-growth-error').textContent = '未完成重置：' + e.message; }
+  finally { growthBusy = false; growthControls(); }
+};
+$('#pe-save').onclick = async () => {
+  const r = await api('/api/persona', { text: $('#pe-text').value });
+  $('#pe-out').textContent = r.ok ? `已保存（${r.chars} 字，立即生效）` : ('失败：' + r.error);
+  if (r.ok) { toast('已保存，下一条就这样说话了'); loadPersona(); }
+};
+$('#pe-switch').onclick = async () => {
+  const id = $('#pe-role').value;
+  const r = await api('/api/roles/switch', { id });
+  $('#pe-out').textContent = r.ok ? `已切到「${r.id}」（${r.chars} 字），下一条消息生效` : ('切换失败：' + r.error);
+  if (r.ok) { toast('角色已切换'); loadPersona(); }
+};
+$('#pe-saveas').onclick = async () => {
+  const id = ($('#pe-newid').value || '').trim();
+  if (!id) { toast('先给这张卡起个名字'); return; }
+  const r = await api('/api/roles/save', { id, text: $('#pe-text').value });
+  $('#pe-out').textContent = r.ok ? `已存成角色卡：${r.id}` : ('保存失败：' + r.error);
+  if (r.ok) { $('#pe-newid').value = ''; toast('角色卡已存好'); loadPersona(); }
+};
+
+/* ── 知识库 ───────────────────────────────────────────── */
+async function loadKb() {
+  const r = await api('/api/kb');
+  if (!r.ok) return;
+  $('#kb-dir').textContent = `目录：${r.dir}　共 ${r.files} 个文件、${(r.sources || []).reduce((a, b) => a + b.chunks, 0)} 块`;
+  $('#kb-list').innerHTML = (r.sources || []).length
+    ? `<ul class="plain">${r.sources.map((s) => `<li>${esc(s.src)} <span class="tag">${s.chunks} 块</span></li>`).join('')}</ul>`
+    : '<div class="hint">目录里还没有 .md / .txt 文件。把资料丢进 data/kb 再点「重新扫描」。</div>';
+}
+$('#kb-reload').onclick = async () => { const r = await api('/api/kb/reload', {}); if (r.ok) { toast('已重新扫描'); loadKb(); } };
+
+/* ── 记忆 ─────────────────────────────────────────────── */
+async function loadMemory() {
+  const r = await api('/api/memory');
+  if (!r.ok) return;
+  const items = (r.items || []).slice().reverse();
+  $('#mem-list').innerHTML = items.length
+    ? `<ul class="plain">${items.map((it) => `<li>${esc(it.text)} <span class="tag">${new Date(it.ts).toLocaleDateString('zh-CN')}</span></li>`).join('')}</ul>`
+    : '<div class="hint">还没有记忆。群里聊到固定安排、称呼习惯时，它会自己记。</div>';
+}
+$('#mem-add').onclick = async () => {
+  const r = await api('/api/memory', { text: $('#mem-text').value.trim() });
+  if (r.ok && r.added) { $('#mem-text').value = ''; toast('已记住'); loadMemory(); } else toast(r.added ? '已记住' : '没加上（空的或重复）');
+};
+$('#mem-clear').onclick = async () => {
+  if (!confirm('清空所有记忆？这个操作不可撤销。')) return;
+  const r = await api('/api/memory', { clear: true });
+  if (r.ok) { toast('已清空'); loadMemory(); }
+};
+
+/* ── 按人记账 ─────────────────────────────────────────── */
+async function loadPeople() {
+  const r = await api('/api/people');
+  if (!r.ok) { $('#pp-list').innerHTML = '<div class="hint">' + esc(r.error || '读不到') + '</div>'; return; }
+  const rows = r.people || [];
+  $('#pp-list').innerHTML = rows.length ? rows.map((p) => `
+    <div class="card" style="margin:0 0 10px;padding:12px 14px">
+      <div class="row"><b>${esc(p.name)}</b><span class="hint">${esc(p.id)}</span>
+        <span class="tag">聊过 ${p.interactions} 次</span>
+        <span class="hint">${p.lastSeenAt ? new Date(p.lastSeenAt).toLocaleString('zh-CN') : ''}</span>
+        <span style="flex:1"></span>
+        <button data-forget="${esc(p.id)}">删掉这本账</button></div>
+      ${(p.traits || []).length ? '<div class="hint" style="margin-top:6px">这个人：' + p.traits.map(esc).join('；') + '</div>' : ''}
+      ${(p.facts || []).length ? '<div class="hint">告诉过我：' + p.facts.map(esc).join('；') + '</div>' : ''}
+      ${(p.topics || []).length ? '<div class="hint">聊过：' + p.topics.map(esc).join('；') + '</div>' : ''}
+    </div>`).join('') : '<div class="hint">还没有账。群里说过话的人会自动开一本。</div>';
+  document.querySelectorAll('#pp-list [data-forget]').forEach((b) => {
+    b.onclick = async () => {
+      if (!confirm('删掉这本账？')) return;
+      const res = await api('/api/people', { id: b.dataset.forget, forget: true });
+      toast(res.ok ? '已删' : ('失败：' + res.error));
+      if (res.ok) loadPeople();
+    };
+  });
+}
+$('#pp-add').onclick = async () => {
+  const id = $('#pp-id').value.trim();
+  if (!id) { $('#pp-out').textContent = '先填 QQ 号'; return; }
+  const r = await api('/api/people', { id, fact: $('#pp-fact').value.trim(), trait: $('#pp-trait').value.trim() });
+  $('#pp-out').textContent = r.ok ? '记下了' : ('失败：' + r.error);
+  if (r.ok) { $('#pp-fact').value = ''; $('#pp-trait').value = ''; loadPeople(); }
+};
+
+/* ── 事件流 ───────────────────────────────────────────── */
+$('#ev-tester').onclick = async () => {
+  $('#ev-test-out').textContent = '调用中…';
+  const r = await api('/api/test-model', {});
+  $('#ev-test-out').textContent = r.ok ? `通了：${r.model} → ${String(r.raw).slice(0, 80)}` : ('失败：' + r.error);
+};
+
+const evBox = $('#events');
+function addEvent(ev) {
+  const t = new Date(ev.ts).toLocaleTimeString('zh-CN', { hour12: false });
+  const extra = ev.group ? `<span class="g">群 ${esc(ev.group)}</span>` : '';
+  const div = document.createElement('div');
+  div.className = 'ev';
+  div.innerHTML = `<time>${t}</time><b>${esc(ev.kind)}</b>${esc(ev.detail || '')}${extra}`;
+  evBox.prepend(div);
+  while (evBox.childElementCount > 200) evBox.lastElementChild.remove();
+}
+const es = new EventSource('/api/events');
+es.onmessage = (e) => { try { addEvent(JSON.parse(e.data)); } catch {} };
+
+loadStatus();
+setInterval(loadStatus, 3000);
+</script>
+</body>
+</html>

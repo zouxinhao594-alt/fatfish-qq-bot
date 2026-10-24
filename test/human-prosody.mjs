@@ -1,0 +1,44 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {createMood} from '../src/mood.mjs';
+import {humanizeDelay} from '../src/humanize.mjs';
+import {createTts} from '../src/tts.mjs';
+import {createCapabilities} from '../src/capabilities.mjs';
+import {planProsody} from '../src/prosody.mjs';
+const dir=fs.mkdtempSync(path.join(os.tmpdir(),'ff-prosody-'));
+try {
+ let now=new Date(2026,9,21,14,0,0).getTime();
+ const mood=createMood({dataDir:dir,cfg:{moodDecayMins:30},now:()=>now});
+ mood.bump('得意','test',3);
+ for(let i=0;i<9;i++){now+=10*60_000;mood.ambient(new Date(now));}
+ assert.equal(mood.state.current,'摸鱼','频繁调用不能阻止衰减');
+ assert.equal(mood.state.intensity,0);
+ assert.equal(mood.observe('这次吃亏了'),'', '吃亏不能触发干饭');
+ mood.observe('今天好累，安慰我');assert.equal(mood.state.current,'温柔');
+ now+=11*60_000;mood.ambient(new Date(2026,9,21,23));assert.equal(mood.state.current,'温柔','深夜不盖过安慰情绪');
+ mood.adopt('惊讶');assert.equal(mood.state.current,'惊讶');
+ const cfg={humanizeEnabled:true,humanDelayBaseMs:700,humanDelayPerCharMs:38,humanDelayMaxMs:5500};
+ assert.ok(humanizeDelay(cfg,'你好',0,()=>.5,'开心')<humanizeDelay(cfg,'你好',0,()=>.5,'困'));
+ assert.equal(humanizeDelay({...cfg,humanizeEnabled:false},'你好',0,()=>.5,'困'),0);
+ const wav=Buffer.alloc(32044);wav.write('RIFF');wav.writeUInt32LE(wav.length-8,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(1,22);wav.writeUInt32LE(16000,24);wav.writeUInt32LE(32000,28);wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(32000,40);
+ const bodies=[];const fetchImpl=async(_url,opts)=>{bodies.push(JSON.parse(opts.body));return new Response(wav);};
+ const tc={ttsEnabled:true,ttsEngine:'local',ttsEndpoint:'http://127.0.0.1:9881',ttsEmotionEnabled:true};
+ const tts=createTts({cfg:tc,dir:path.join(dir,'cache'),fetchImpl});
+ const a=await tts.speak('你好',{mood:'开心（1/3）'});
+ const b=await tts.speak('你好',{mood:'开心（3/3）'});
+ assert.notEqual(a.file,b.file);assert.deepEqual(bodies.map(x=>x.emotion_strength),[1,3]);
+ assert.ok(bodies[1].speed_factor>bodies[0].speed_factor);
+ assert.equal(bodies[1].prosody.version,1);
+ assert.equal(bodies[1].fragment_interval,bodies[1].prosody.pauseMs/1000);
+ assert.equal(planProsody({mood:'困',enabled:false}).speed,1);
+ assert.equal(planProsody({mood:'未知'}).strength,0);
+ assert.ok(planProsody({mood:'温柔（3/3）'}).speed<planProsody({mood:'开心（3/3）'}).speed);
+ tc.ttsEmotionEnabled=false;await tts.speak('你好',{mood:'开心（3/3）'});
+ assert.equal(bodies.at(-1).emotion_strength,0);assert.equal(bodies.at(-1).emotion,'');
+ const caps=createCapabilities({cfg:{...tc,ttsEmotionEnabled:true},dataDir:path.join(dir,'caps'),llm:{},fetchImpl});
+ const out=await caps.act({voice:true,segments:['你好'],mood:'温柔'},{groupId:'1'},{mood:'温柔（3/3）'});
+ assert.equal(bodies.at(-1).emotion_strength,3);assert.ok(out[0][0].data.file.startsWith('base64://'));
+ console.log('拟人化专项通过：连续衰减、语义误触、安慰优先、语速节奏、情绪强弱、缓存隔离、关闭开关、base64');
+}finally{fs.rmSync(dir,{recursive:true,force:true});}

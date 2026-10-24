@@ -1,0 +1,33 @@
+# 运行数据（配置/令牌/日志/真人语音/聊天记录）绝对不进版本库
+data/
+
+# 依赖与构建产物
+node_modules/
+dist/
+
+# 日志与临时文件
+*.log
+*.tmp
+*.bak
+
+# 模型权重（别把几 GB 的东西推上去）
+*.pth
+*.index
+*.onnx
+*.safetensors
+models/
+cache/
+
+# 系统垃圾
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+
+# 环境变量（如果你用 .env 放密钥）
+.env
+.env.*
