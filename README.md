@@ -215,3 +215,19 @@ node test/run.mjs
 ## License
 
 MIT，见 [LICENSE](LICENSE)。
+
+---
+
+## 相关项目与技术栈
+
+如果你是从下面这些关键词找过来的，那这个仓库就是你要的：
+
+- **协议层**：[OneBot 11](https://github.com/botuniverse/onebot-11) HTTP / WebSocket
+- **QQ 网关**：[NapCatQQ](https://github.com/NapNeko/NapCatQQ)、SnowLuma（QQ 空间发布要用 SnowLuma）
+- **对话模型**：任意 OpenAI 兼容接口（DeepSeek / Qwen / GLM / 本地 vLLM 都行）
+- **语音合成**：GPT-SoVITS / VITS 系本地推理服务
+- **音色转换**：RVC（检索增强音色转换），唱歌走 Demucs 分离 + RVC 翻唱
+- **音乐**：QQ 音乐 / 网易云音乐接口、B 站音源
+- **运行时**：Node.js 20+，零 npm 依赖，单进程，Windows 上双击即跑
+
+关键词：QQ 机器人、AI 陪伴、群聊机器人、虚拟女友、AI VTuber、语音克隆、文字转语音、GPT-SoVITS、RVC 翻唱、Demucs、QQ 空间、本地部署、Windows 一键启动、onebot11、napcat、snowluma、deepseek。
