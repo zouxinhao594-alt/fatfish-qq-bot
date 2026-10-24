@@ -82,10 +82,13 @@ QQ 客户端 ── OneBot11 网关（SnowLuma / NapCat 等）──正向 WebSo
 ### 1. 起程序
 
 ```bash
-git clone <这个仓库>
+git clone https://github.com/zouxinhao594-alt/fatfish-qq-bot.git
 cd fatfish-qq-bot
 node src/main.mjs --data data
 ```
+
+> 不想装 git？页面右上角 `Code → Download ZIP`，或到 [Releases](https://github.com/zouxinhao594-alt/fatfish-qq-bot/releases) 下载最新版，
+> 解压后进入目录跑同一条命令 `node src/main.mjs --data data` 即可。不需要 `npm install`，这个项目没有依赖。
 
 控制台地址会打印在终端里（默认 `http://127.0.0.1:3092`）。第一次运行会在 `data/` 下生成 `config.json`
 （默认全是安全值：**演练模式**、白名单为空、语音关闭）。
