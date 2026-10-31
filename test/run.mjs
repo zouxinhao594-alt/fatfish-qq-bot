@@ -372,7 +372,7 @@ import { createProactive } from '../src/proactive.mjs';
 
 function makeProactive(over = {}) {
   const sent = [];
-  const cfg = baseCfg({ proactiveEnabled: true, proactiveIdleMins: 30, proactiveChance: 1, proactiveMaxPerHour: 2, quietEnabled: false, ...over });
+  const cfg = baseCfg({ proactiveEnabled: true, ownerUin: '10042', proactiveIdleMins: 30, proactiveChance: 1, proactiveMaxPerHour: 2, quietEnabled: false, ...over });
   let t = 3_000_000;
   const p = createProactive({
     cfg,
@@ -405,6 +405,29 @@ await testAsync('主动发起：安静够久就开口，且真的发出去', asy
   assert.equal(sent.length, 1);
   assert.match(sent[0].segs[0].data.text, /安静/);
   assert.equal(p.stats.fired, 1);
+});
+
+await testAsync('主动发起：默认私聊主人，不发群', async () => {
+  const { p, sent, advance } = makeProactive();
+  advance(31 * 60_000);
+  await p.fire('测试');
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].target.userId, '10042', '应该发给主人私聊');
+  assert.equal(sent[0].target.groupId, undefined, '不该往群里发');
+
+  const noOwner = makeProactive({ ownerUin: '' });
+  noOwner.advance(31 * 60_000);
+  const d = noOwner.p.shouldFire();
+  assert.equal(d.fire, false);
+  assert.match(d.why, /管理员/);
+});
+
+await testAsync('主动发起：改成 group 就回退到发群（老行为）', async () => {
+  const { p, sent, advance } = makeProactive({ proactiveTarget: 'group' });
+  advance(31 * 60_000);
+  await p.fire('测试');
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].target.groupId, '123');
 });
 
 await testAsync('主动发起：每小时上限与概率都生效', async () => {

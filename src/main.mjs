@@ -179,7 +179,7 @@ const pipeline = createPipeline({ cfg, log, llm, gate, persona, memory, kb, guar
 pipeline.gateStats = gate.stats;
 pipeline.caps = caps;
 
-// 主动发起：群里安静太久时自己开个话头（默认关，设置页里开）
+// 主动发起：安静太久时自己先开口（默认关，设置页里开；默认只私聊主人，不在群里插话）
 const proactive = createProactive({
   cfg, llm, guard, log, transport, persona: persona.load(),
   recentOf: (groupId) => (pipeline.recent.get(groupId) || []).map((r) => ({ nickname: r.nickname, text: r.text }))
@@ -199,7 +199,7 @@ transport.onMessage((msg) => {
 // 它自己说话也算活动（否则会刚回完一句，又自己开话头）
 log.subscribe((e) => { if (e.kind === 'reply') proactive.noteActivity(); });
 const proactiveEvery = proactive.start();
-if (cfg.proactiveEnabled) log.event('proactive', `主动发起已开：每 ${proactiveEvery} 分钟看一次，安静 ${cfg.proactiveIdleMins} 分钟以上才可能开口`);
+if (cfg.proactiveEnabled) log.event('proactive', `主动发起已开：每 ${proactiveEvery} 分钟看一次，安静 ${cfg.proactiveIdleMins} 分钟以上才可能开口，发到${String(cfg.proactiveTarget || 'owner') === 'group' ? '白名单第一个群' : '主人私聊'}`);
 
 const port = await consoleUi.listen();
 writeJsonAtomic(lockFile, { pid: process.pid, consolePort: port, startedAt: Date.now(), version: '0.1.0' });

@@ -60,8 +60,9 @@ export const DEFAULTS = {
   autonomyMaxPerHour: 20,    // 每小时主动发言上限（0=不限）
   gateMaxTokens: 600,        // 把关那一次的 token 预算（模型会先思考，给少了正文为空）
 
-  // —— 主动发起（群里安静太久时自己开个话头）——
+  // —— 主动发起（安静太久时它自己先开口）——
   proactiveEnabled: false,
+  proactiveTarget: 'owner',  // owner = 只私聊发给管理员（群里不插话）；group = 发到白名单第一个群
   proactiveIdleMins: 30,     // 安静多少分钟才考虑主动开口
   proactiveCheckMins: 5,     // 每隔多少分钟检查一次
   proactiveChance: 0.25,     // 每次检查时真的开口的概率
