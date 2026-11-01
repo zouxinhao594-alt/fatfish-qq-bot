@@ -34,6 +34,9 @@ export const DEFAULTS = {
   ownerUin: '',
   ownerTitle: '主人',          // 偶尔这样称呼主人（人格里禁的是"亲/宝/老板"，这里单独给主人开口子）
   ownerAlwaysReply: true,      // 主人说话必回：绕过把关打分、主动发言冷却和静默时段
+  // 熟人：比群友松（必回、话更多、语气更熟），但仍守静默时段和频率上限
+  friendUin: '',               // 熟人 QQ 号，逗号分隔；规则同 ownerUin（只认 4 位以上纯数字）
+  closeAlwaysReply: true,      // 熟人说话必回：绕过把关打分和主动发言冷却（不绕静默时段）
   groups: [],
   napcatWs: 'ws://127.0.0.1:3001',
   napcatToken: '',

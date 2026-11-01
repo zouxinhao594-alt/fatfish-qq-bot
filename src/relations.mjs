@@ -1,13 +1,15 @@
 // 关系：它对谁亲、跟谁保持距离。
 //
-// 这是「主人 / 群友」的唯一判断点：
+// 这是「主人 / 熟人 / 群友」的唯一判断点：
 //   pipeline 用它决定 提示词怎么写、给几句话、心情要不要回暖；
 //   gate     用它决定 要不要绕过把关打分、冷却和静默时段。
+//
+// 三档：owner（主人/家长）> close（熟人，必回、更松）> friend（一般群友）
 //
 // 为什么单独一个文件：
 //   1. 判断规则要能单测（QQ 号带空格、带逗号、写成数字都要认）；
 //   2. 提示词是最容易越界的地方（对群友撒娇 = 骚扰），集中一处才好审；
-//   3. 以后要加「熟人 / 黑名单」只是多一档，不用动 pipeline。
+//   3. 以后要加「黑名单」只是多一档，不用动 pipeline。
 //
 // 设计取向：主人档是「更亲 + 更优先」，不是「更没边界」。
 //   亲热 = 语气更软、愿意被使唤、心情回暖、给的话更多；
@@ -25,11 +27,14 @@ function cleanIds(raw) {
 
 export function createRelations({ cfg = {}, log = null } = {}) {
   const ids = () => cleanIds(cfg.ownerUin);
+  const closeIds = () => cleanIds(cfg.friendUin);
 
   function tierOf(userId) {
     const id = String(userId ?? '').trim();
     if (!id) return 'friend';
-    return ids().includes(id) ? 'owner' : 'friend';
+    if (ids().includes(id)) return 'owner';
+    if (closeIds().includes(id)) return 'close';
+    return 'friend';
   }
 
   const isOwner = (userId) => tierOf(userId) === 'owner';
@@ -39,10 +44,10 @@ export function createRelations({ cfg = {}, log = null } = {}) {
     return t || OWNER_TITLE_FALLBACK;
   }
 
-  /** 回话条数上限：主人比群里多给一条（真人跟亲近的人说话也更愿意多讲两句） */
+  /** 回话条数上限：主人/熟人比群里多给一条（真人跟亲近的人说话也更愿意多讲两句） */
   function maxSegmentsFor(tier, base) {
     const n = Math.max(1, Math.min(3, Number(base) || 2));
-    return tier === 'owner' ? Math.min(3, n + 1) : n;
+    return (tier === 'owner' || tier === 'close') ? Math.min(3, n + 1) : n;
   }
 
   /** 写进 system prompt 的那一段「你现在在跟谁说话」 */
@@ -62,6 +67,17 @@ export function createRelations({ cfg = {}, log = null } = {}) {
         groupId ? '- 群里人多，收着点，别当众撒娇。' : ''
       ].filter(Boolean).join('\n');
     }
+    if (tier === 'close') {
+      // 熟人：比群友松，但明确不是家人 —— 不撒娇、不抖私事。
+      return [
+        `【现在跟你说话的是谁】是熟人「${who}」${idLine ? `（QQ ${idLine}）` : ''}，不是你的${title()}。`,
+        '你跟他熟，说话比一般群友松一点，但没到家人那份上：',
+        '- 他一开口你就应一声，不用等他 @ 你，也不用端着；',
+        '- 可以打趣、可以损他两句、可以记得他以前说过的小事，但别撒娇、别黏人、别说情话；',
+        `- 别叫他「${title()}」「宝宝」「亲爱的」；也别把${title()}的事、你自己的私事抖给他；`,
+        '- 他问你的来历、模型、技术，还是那句"我就是群里的大肥鱼呀"。'
+      ].filter(Boolean).join('\n');
+    }
     return [
       `【现在跟你说话的是谁】是群友「${who}」，不是你的${title()}。按朋友的距离说话：`,
       '- 友好、随意，可以吐槽、可以开玩笑，但别撒娇、别黏人；',
@@ -75,9 +91,11 @@ export function createRelations({ cfg = {}, log = null } = {}) {
   function describe() {
     return {
       ownerUin: ids(),
+      friendUin: closeIds(),
       title: title(),
       alwaysReply: cfg.ownerAlwaysReply !== false,
-      tiers: ['owner', 'friend']
+      closeAlwaysReply: cfg.closeAlwaysReply !== false,
+      tiers: ['owner', 'close', 'friend']
     };
   }
 
@@ -86,7 +104,9 @@ export function createRelations({ cfg = {}, log = null } = {}) {
     log.event('relation', list.length
       ? `认主：${list.join(', ')}（称呼「${title()}」，${cfg.ownerAlwaysReply !== false ? '说话必回' : '和群友一样走判定'}）`
       : `没配主人 QQ（ownerUin）：所有人一律按朋友距离说话`);
+    const close = closeIds();
+    if (close.length) log.event('relation', `熟人：${close.join(', ')}（说话必回、语气更松，仍守静默时段和频率上限）`);
   }
 
-  return { tierOf, isOwner, title, maxSegmentsFor, hintFor, describe, ownerIds: ids };
+  return { tierOf, isOwner, title, maxSegmentsFor, hintFor, describe, ownerIds: ids, closeIds };
 }

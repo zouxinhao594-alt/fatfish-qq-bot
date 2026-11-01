@@ -1361,6 +1361,30 @@ test('关系：没配主人，谁都是群友距离', () => {
   assert.equal(createRelations({ cfg: relCfg({ ownerUin: '' }) }).tierOf('10001'), 'friend');
 });
 
+test('关系：熟人档认得出来，且排不到主人前面', () => {
+  const rel = createRelations({ cfg: relCfg({ friendUin: '1240964844, 20002' }) });
+  assert.equal(rel.tierOf('1240964844'), 'close');
+  assert.equal(rel.tierOf(1240964844), 'close', '写成数字也要认');
+  assert.equal(rel.tierOf('10003'), 'friend');
+  assert.deepEqual(rel.closeIds(), ['1240964844', '20002']);
+  assert.equal(rel.tierOf('10001'), 'owner');
+  // 同一个号两处都填：按主人算，不能让熟人档覆盖家人关系
+  const both = createRelations({ cfg: relCfg({ friendUin: '10001' }) });
+  assert.equal(both.tierOf('10001'), 'owner');
+});
+
+test('关系：对熟人的提示词比群友松，但不许撒娇、不许抖私事', () => {
+  const rel = createRelations({ cfg: relCfg({ friendUin: '1240964844' }) });
+  const close = rel.hintFor({ userId: '1240964844', nickname: '老张', groupId: '10002' });
+  assert.match(close, /熟人/);
+  assert.match(close, /打趣|损他/, '要允许打趣');
+  assert.match(close, /别撒娇|别黏人/, '边界要写清');
+  assert.match(close, /私事/, '不能把私事抖给他');
+  assert.ok(!/顺着他/.test(close), '熟人不是主人，别用主人那一套');
+  assert.equal(rel.maxSegmentsFor('close', 2), 3, '熟人多给一句');
+  assert.equal(rel.maxSegmentsFor('close', 3), 3, '但最多还是三条');
+});
+
 test('关系：提示词对主人最亲，对群友保持朋友距离', () => {
   const rel = createRelations({ cfg: relCfg() });
   const owner = rel.hintFor({ userId: '10001', nickname: '肥鱼主人', groupId: '10002' });
@@ -1394,6 +1418,23 @@ test('关系：主人能多给一条回话，但最多三条', () => {
 test('关系：认主的提示词里已经交代了"来历照样不破例"', () => {
   const rel = createRelations({ cfg: relCfg() });
   assert.match(rel.hintFor({ userId: '10001', nickname: 'x' }), /来历/);
+});
+
+await testAsync('熟人：没 @ 也必回，不花把关调用；静默时段照样不回', async () => {
+  const llm = fakeLlm([]); // 不该被调用
+  const gate = createGate({ cfg: baseCfg({ friendUin: '1240964844' }), llm, log: null });
+  const v = await gate.decide(gmsg({ userId: '1240964844' }), { recent: [], tier: 'close' });
+  assert.equal(v.reply, true);
+  assert.equal(v.reason, '熟人');
+  assert.equal(v.close, true);
+  assert.equal(llm.calls.length, 0, '熟人这一档不该再花一次把关调用');
+  assert.equal(gate.stats.closePassed, 1);
+
+  const quiet = baseCfg({ friendUin: '1240964844', quietEnabled: true, quietStart: '00:00', quietEnd: '23:59' });
+  const qgate = createGate({ cfg: quiet, llm: fakeLlm([]), log: null });
+  const qv = await qgate.decide(gmsg({ userId: '1240964844' }), { recent: [], tier: 'close' });
+  assert.equal(qv.reply, false, '熟人不该在静默时段吵人');
+  assert.equal(qv.reason, '静默时段');
 });
 
 await testAsync('主人：没 @ 也必回，而且不花把关那次调用', async () => {

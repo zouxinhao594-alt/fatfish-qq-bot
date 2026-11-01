@@ -19,7 +19,7 @@
 // 所以这里给足预算（gateMaxTokens=600），空内容还要重试一次 + 启发式兜底。
 
 export function createGate({ cfg, llm, log, now = () => Date.now(), random = Math.random }) {
-  const stats = { checked: 0, passed: 0, silent: 0, skipped: 0, limited: 0, gateCalls: 0, proactive: 0, cooldownHits: 0, hourlyHits: 0, fallback: 0, ownerPassed: 0 };
+  const stats = { checked: 0, passed: 0, silent: 0, skipped: 0, limited: 0, gateCalls: 0, proactive: 0, cooldownHits: 0, hourlyHits: 0, fallback: 0, ownerPassed: 0, closePassed: 0 };
   const minuteHits = new Map(); // groupId -> timestamps
   let proactiveTimes = [];      // 最近一小时的主动发言时间
   let lastProactiveAt = 0;
@@ -153,6 +153,16 @@ export function createGate({ cfg, llm, log, now = () => Date.now(), random = Mat
     }
 
     if (withinQuiet()) { stats.silent += 1; return { reply: false, reason: '静默时段' }; }
+
+    // 熟人说话：必回。不走把关打分，也不吃主动发言冷却 —— 但静默时段和频率上限照样管
+    // （跟主人的区别就在这里：熟人是"要应"，不是"随时都能吵醒她"）
+    if (tier === 'close' && cfg.closeAlwaysReply !== false) {
+      if (!rateOk(msg.groupId || 'private')) return { reply: false, reason: '触发频率上限' };
+      stats.passed += 1;
+      stats.closePassed += 1;
+      return { reply: true, reason: '熟人', close: true, score: 10 };
+    }
+
     if (cfg.requireMention) { stats.skipped += 1; return { reply: false, reason: '没 @ 我（requireMention 开着）' }; }
     if (!rateOk(msg.groupId || 'private')) return { reply: false, reason: '触发频率上限' };
 

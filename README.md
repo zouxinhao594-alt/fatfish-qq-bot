@@ -142,7 +142,8 @@ node src/main.mjs --data data
 | 键 | 作用 |
 | --- | --- |
 | `dryRun` | 演练模式：只记日志不发消息。**第一次务必开着调** |
-| `groups` / `ownerUin` | 群白名单 / 管理员 QQ（认主） |
+| `groups` / `ownerUin` | 群白名单 / 管理员 QQ（认主，必回、最亲） |
+| `friendUin` | 熟人 QQ 号（逗号分隔）：说话必回、语气更松、多给一句；仍守静默时段 |
 | `napcatWs` / `napcatToken` | OneBot11 网关地址与令牌 |
 | `personaFile` / `personaRolesDir` | 人格文件名 / 角色卡目录（`data/roles/*.md`，控制台可切换） |
 | `ttsEnabled` / `ttsEngine` / `ttsEndpoint` | 语音总开关、引擎、接口 |

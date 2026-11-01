@@ -67,6 +67,8 @@ export const FIELDS = {
   ownerUin: { group: 'channel', label: '管理员（主人）QQ 号', hint: '填了就等于认主：这个号必回，不受把关打分/冷却/静默限制，语气也最亲；其他人一律按朋友距离。多个号用逗号分隔', type: 'text' },
   ownerTitle: { group: 'channel', label: '怎么称呼主人', hint: '它偶尔会这样叫主人，默认「主人」。别在人格里禁掉的称呼（亲/宝/老板）里选', type: 'text' },
   ownerAlwaysReply: { group: 'gate', label: '主人说话必回', hint: '主人没 @ 你、正处静默时段、把关给了低分，也照回。关掉就和其他人一样走判定', type: 'bool' },
+  friendUin: { group: 'channel', label: '熟人 QQ 号', hint: '这些号算「熟人」：说话必回、语气更松、多给一句；但不会撒娇、不抖私事。逗号分隔，可以填多个', type: 'text' },
+  closeAlwaysReply: { group: 'gate', label: '熟人说话必回', hint: '熟人没 @ 你、把关给了低分也照回；但静默时段和频率上限还管着它（夜里不吵人）', type: 'bool' },
   groups: { group: 'channel', label: '允许说话的群', hint: '白名单，逗号分隔。留空 = 哪个群都不理（不是"所有群都理"，这个坑很多）', type: 'list' },
 
   // ── 模型与路由 ──

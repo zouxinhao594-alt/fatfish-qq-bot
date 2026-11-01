@@ -258,7 +258,7 @@ export function createPipeline({ cfg, log, llm, gate, persona, memory, kb, guard
         try {
           mood.ambient();
           const ev = mood.observe(msg.text);
-          if (tier === 'owner' && !ev) mood.warm();
+          if ((tier === 'owner' || tier === 'close') && !ev) mood.warm();
         } catch { /* 心情坏了不影响回话 */ }
       }
       const mediaNotes = await caps.enrich(msg);
